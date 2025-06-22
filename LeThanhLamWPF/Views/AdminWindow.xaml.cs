@@ -13,21 +13,51 @@ using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 using Models;
 using Services;
+using System.ComponentModel;
 
 namespace LeThanhLamWPF.Views
 {
     /// <summary>
     /// Interaction logic for AdminWindow.xaml
     /// </summary>
-    public partial class AdminWindow : Window
+    public partial class AdminWindow : Window, INotifyPropertyChanged
     {
         private readonly ICustomerService _customerService;
         private readonly IRoomService _roomService;
         private readonly IBookingService _bookingService;
 
+        private int _totalCustomers;
+        public int TotalCustomers
+        {
+            get => _totalCustomers;
+            set { _totalCustomers = value; OnPropertyChanged(nameof(TotalCustomers)); }
+        }
+
+        private int _totalRooms;
+        public int TotalRooms
+        {
+            get => _totalRooms;
+            set { _totalRooms = value; OnPropertyChanged(nameof(TotalRooms)); }
+        }
+
+        private int _totalBookings;
+        public int TotalBookings
+        {
+            get => _totalBookings;
+            set { _totalBookings = value; OnPropertyChanged(nameof(TotalBookings)); }
+        }
+
+        private decimal _totalRevenue;
+        public decimal TotalRevenue
+        {
+            get => _totalRevenue;
+            set { _totalRevenue = value; OnPropertyChanged(nameof(TotalRevenue)); }
+        }
+
         public AdminWindow()
         {
             InitializeComponent();
+            DataContext = this;
 
             try
             {
@@ -37,6 +67,12 @@ namespace LeThanhLamWPF.Views
 
                 // Load data after the window is fully loaded
                 this.Loaded += AdminWindow_Loaded;
+
+                // Giả lập dữ liệu báo cáo, bạn thay bằng truy vấn thực tế từ DB
+                TotalCustomers = 120;
+                TotalRooms = 45;
+                TotalBookings = 320;
+                TotalRevenue = 15000000;
             }
             catch (Exception ex)
             {
@@ -64,15 +100,24 @@ namespace LeThanhLamWPF.Views
             try
             {
                 // Load customers
-                if (_customerService != null && CustomersDataGrid != null)
-                    CustomersDataGrid.ItemsSource = _customerService.GetAllCustomers();
+                var customers = _customerService?.GetAllCustomers() ?? new List<Customer>();
+                if (CustomersDataGrid != null)
+                    CustomersDataGrid.ItemsSource = customers;
 
                 // Load rooms
-                if (_roomService != null && RoomsDataGrid != null)
-                    RoomsDataGrid.ItemsSource = _roomService.GetAllRooms();
+                var rooms = _roomService?.GetAllRooms() ?? new List<RoomInformation>();
+                if (RoomsDataGrid != null)
+                    RoomsDataGrid.ItemsSource = rooms;
 
-                // Load bookings only if the tab control and filter are available
+                // Load bookings
+                var bookings = _bookingService?.GetAllBookings() ?? new List<BookingReservation>();
                 LoadBookings();
+
+                // Cập nhật số liệu báo cáo
+                TotalCustomers = customers.Count;
+                TotalRooms = rooms.Count;
+                TotalBookings = bookings.Count;
+                TotalRevenue = bookings.Sum(b => b.TotalPrice);
             }
             catch (Exception ex)
             {
@@ -368,6 +413,12 @@ namespace LeThanhLamWPF.Views
             {
                 // Silent fail for helper method
             }
+        }
+
+        public event PropertyChangedEventHandler PropertyChanged;
+        protected void OnPropertyChanged(string propertyName)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
     }
 }
